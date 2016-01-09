@@ -37,29 +37,71 @@ test1:-
 	check2(2,3),
 	check2(4,5),
 	check2(4,4),
-Turn = 'o',
+	% Turn = 'o',
 	% findall((R,C),o(R,C),List),
 	% writef('O in locations: %w \n',[List]),
+% current_input(In),current_output(Out),
+% writef(' Input stream is %w, Output stream is %w \n',[In,Out]),
+    nl,
+    write('===================='), nl,
+	write('== Prolog Othello =='), nl,
+	write('===================='), nl, nl,
+	write('Reminder : x always starts the game'), nl,
+	playAskToken.
 
-showarr(Dim),
 
-getvalidmoves(Turn,ValidMoves), 
-	% writef('1 List of valid moves for %w are: %w\n',[Turn,Moves]),
-	% findall(Output,analyze(Turn,Moves,Output,0),Moves2),
 
-writef(' List of Valid moves for %w: %w\n',[Turn,ValidMoves]),
- !
-.
+playAskToken :-
+	  nl, write('Token for human player ? (x or o)'), nl,
+	  read(Player), nl,
+	  (
+	    Player \= o, Player \= x, !,     % If not x or o -> not a valid color
+	    write('Error : not a valid color !'), nl,
+	    playAskToken                     % Ask again
+	    ;
+		Dim = 8,
+		showarr(Dim),
+		Turn = 'x',
+		getvalidmoves(Turn,Moves,ValidMoves), 
+		% writef('1 List of valid moves for %w are: %w\n',[Turn,Moves]),
+		% findall(Output,analyze(Turn,Moves,Output,0),Moves2),
+		% writef(' List of Valid moves for %w: %w\n',[Turn,Moves]),
+		writef(' List of Valid moves and weights for %w: %w\n',[Turn,ValidMoves]),
+		getuserinput(Moves,NewLoc),
+		writef(' New location is %w \n',[NewLoc]),
+		putnewtoken(Turn,NewLoc),
+		showarr(Dim),	
+		!
+	    % Start the game with color and emptyBoard
+	    % play([x, play, EmptyBoard], Player)
+	  ).
 
 /*--------------------------------------------------------------------------   
   Determine all valid moves for player O
   Results placed in Moves, a list of locations [[X,Y],....] 
 --------------------------------------------------------------------------*/
-getvalidmoves(Turn,Output):-
+getuserinput(Moves,NewLoc):-
+	write('Enter next move: Row,Col and press enter --> '),
+	read((R,C)),
+	Loc = [R,C], 
+	writef("Entered Loc is %w   Loc2 is %w  Moves: %w  \n",[Loc,Moves]),
+	(memberchk(Loc,Moves) -> 
+		(writef('Valid move \n'),NewLoc = [R,C],writef(' New location is %w \n',[NewLoc]))
+		;
+		(writef('Invalid move %w - Please try again \n',[Loc]),getuserinput(Moves,NewLoc))
+	),
+nl.
+
+/*--------------------------------------------------------------------------   
+  Determine all valid moves for player O
+  Results placed in Moves, a list of locations [[X,Y],....] 
+  --------------------------------------------------------------------------*/
+getvalidmoves(Turn,Moves,Output):-
 	validmoves(Turn,Moves), 
 	writef('List of potential moves for %w: %w\n',[Turn,Moves]),
     % findall(Output,analyze_moves(Turn,Moves,Moves_o),Output),
 	analyze_moves(Turn,Moves,Output),
+	writef('List of possible moves for %w: %w\n',[Turn,Output]),
 	nl.
 	
 validmoves(Turn,Moves):-
@@ -70,28 +112,6 @@ validmoves(Turn,Moves):-
 	writef("List of valid moves for %w is: %w \n",[Turn,Moves]),
 	true.
 	
-	 
-/* validmoves('o',Moves):-
-	% writef('Determine valid moves for OO \n'),
-	findall([R,C],x(R,C),Listx),
-	writef("List of X Locations: %w \n",[Listx]),
-	% --- not needed ----> maplist(findadjfree('x',Outlist),List)
-	findall(Res,(member(Elem,Listx),findadjfree('x',Elem,Res)),Moves_o),
-		writef("Moves_o: %w \n",[Moves_o]),
-	append(Moves_o,Moves).
-	% writef("List of valid moves for O is: %w \n",[Moves]).
-
-validmoves('x',Moves):-
-	% writeln('Determine valid moves for XX'	),
-	findall([R,C],o(R,C),Listo),
-	writef("List of O Locations: %w \n",[Listo]),
-	% --- not needed ---->  maplist(findadjfree('o',Outlist),List),
-	findall(Res,(member(Elem,Listo),findadjfree('o',Elem,Res)),Moves_x),
-		writef("Moves_x: %w \n",[Moves_x]),
-	append(Moves_x,Moves),
-	nl.
- */	
-
 /*--------------------------------------------------------------------------   
   findadjfree - Find available cells adjacent to [Row,Col]
   Uses constraint programming 
@@ -124,7 +144,7 @@ analyze_(_,[],Temp,Temp).
 analyze_(Turn,[Loc|Rest], Temp, Output):-
 	[X,Y] = Loc,
 	% Output = [X,Y,Score],
- 	writef('\n *** Determine valid moves for player %w at location: %w \n',[Turn,Loc]),
+ 	% writef('\n *** Determine valid moves for player %w at location: %w \n',[Turn,Loc]),
 
 	analyze_horizontal(Turn,Loc,OutScoreH),
 	analyze_vertical(Turn,Loc,OutScoreV),
@@ -132,9 +152,14 @@ analyze_(Turn,[Loc|Rest], Temp, Output):-
 
 	Score is OutScoreD + OutScoreH + OutScoreV,
 	
-	writef(' *** Loc: %w,%w   Horiz Score: %w   Vert score: %w  Diag score: %w \n',[X,Y,OutScoreH,OutScoreV,OutScoreD]),
-	append([[X,Y,Score]],Temp,Temp2),
-	% writef('Temp2  is: %w \n',[Temp2]),		
+	writef(' *** Loc: [%w,%w]   H-Score: %w   V-score: %w  D-score: %w  Total Score: %w\n',[X,Y,OutScoreH,OutScoreV,OutScoreD,Score]),
+	% writef('Before Append - Temp is: %w  Temp2 is: %w \n',[Temp,Temp2]),		
+	(Score > 0 -> 
+		append([[X,Y,Score]],Temp,Temp2)
+		; 
+		(Temp2 = Temp)
+	),
+	% writef('After Append - Temp is: %w  Temp2 is: %w \n',[Temp,Temp2]),		
 
 	analyze_(Turn,Rest,Temp2,Output),
     % writef('Output is:   %w \n',[Output]),
@@ -153,7 +178,7 @@ analyze_horizontal(Turn,[X,Y],OutScore):-
 	a_h_f(Turn,X,Y,InScore,OutScoreHF),
 	% writef('  call a_h_b \n'),
 	a_h_b(Turn,X,Y,InScore,OutScoreHB),
-	writef('  *-- a_h_f score: %w   a_h_b score : %w \n',[OutScoreHF,OutScoreHB]),
+	% writef('  *-- a_h_f score: %w   a_h_b score : %w \n',[OutScoreHF,OutScoreHB]),
 	OutScore  is OutScoreHF + OutScoreHB.
 
 a_h_f(Turn,X,Y,Score,Score):-
@@ -214,15 +239,16 @@ analyze_vertical(Turn,[X,Y],OutScore):-
 	a_v_f(Turn,X,Y,InScore,OutScoreVF),
 	% writef('  call a_v_b \n'),
 	a_v_b(Turn,X,Y,InScore,OutScoreVB),
-	writef('  *-- a_v_f score: %w   a_v_b score : %w \n',[OutScoreVF,OutScoreVB]),
+	% writef('  *-- a_v_f score: %w   a_v_b score : %w \n',[OutScoreVF,OutScoreVB]),
 	OutScore is OutScoreVF + OutScoreVB.
 
 a_v_f(Turn,X,Y,Score,0):-
 	X < 8, 	X2 is X + 1,
 	% writef('     a- Determine forward vertical (free) for player %w at location: %w/%w Score is: %w \n',[Turn,X2,Y,Score]),
 	free(X2,Y), 
-	% writef('        Location: %w/%w  is empty\n',[X2,Y]), !.
+	% writef('        Location: %w/%w  is empty\n',[X2,Y]),
 	!.
+	
 a_v_f(Turn,X,Y,Score,Score):- 
 	X < 8,
 	X2 is X + 1,
@@ -267,7 +293,7 @@ a_v_b(Turn,X,Y,Score,OutScore):-
  
 --------------------------------------------------------------------------*/	
 analyze_diagonal(Turn,[X,Y],OutScore):-
- 	% writef('  *-- Determine diagonal moves for player %w at location: %w/%w \n',[Turn,X,Y]),
+ 	writef('  *-- Determine diagonal moves for player %w at location: %w/%w \n',[Turn,X,Y]),
 	InScore is 0,
 	% writef('  call a_d_f \n'),
 	a_d_f(Turn,X,Y,InScore,OutScoreDF),
@@ -281,61 +307,76 @@ a_d_f(Turn,X,Y,Score,0):-
 	Y < 8, Y2 is Y + 1, 
 	 writef('     a- Determine forward diagonal (free) for player %w at location: %w/%w Score is: %w \n',[Turn,X2,Y2,Score]),
 	free(X2,Y2), 
-	 writef('        Location: %w/%w  is empty \n',[X2,Y2]), !.
-	% !.
+	writef('        Location: %w/%w  is empty \n',[X2,Y2]),
+	!.
+	% true.
 	
-a_d_f(Turn,X,Y,Score,0):- 
+a_d_f(Turn,X,Y,Score,OutScore):- 
 	X < 8, X2 is X + 1,
 	Y < 8, Y2 is Y + 1,
-	Score =:= 1,
+	% Score =:= 1,
 	writef('     b- Determine forward diagonal moves(same tkn) for player %w at location: %w/%w Score is: %w\n',[Turn,X2,Y2,Score]),
 	call(Turn,X2,Y2),
+	OutScore is Score,
 	writef('        Location: %w/%w  has same token\n',[X2,Y2]),
 	!.
  
 a_d_f(Turn,X,Y,Score,OutScore):-
 	X < 8, X2 is X + 1,
 	Y < 8, Y2 is Y + 1, 
-	 writef('     c- Determine forward diagonal moves(opp token) for player %w at location: %w/%w Score is: %w\n',[Turn,X2,Y2,Score]),
+	writef('     c- Determine forward diagonal moves(opp token) for player %w at location: %w/%w Score is: %w\n',[Turn,X2,Y2,Score]),
 	opp_player(Turn,Opp_Player),
-	Score2 is 1, 
+	Score2 is Score + 1, 
 	call(Opp_Player,X2,Y2),
-	a_d_f(Turn,X2,Y,Score2,OutScore2),
+	a_d_f(Turn,X2,Y2,Score2,OutScore2),
 	OutScore is OutScore2,
-	writef('        return from a_d_f with x2/y2: %w,%w Score: %w  Outscore:%w \n',[X2,Y2,Score2,OutScore]).
+	writef('        return from a_d_f with x2/y2: %w,%w Score: %w  Outscore:%w \n',[X2,Y2,Score2,OutScore]),
+	true.
+
+
+
+
+
 	
+%% backwards search -----------------------------------------------------------------
 
 a_d_b(Turn,X,Y,_,0):- 
 	X < 8, X2 is X - 1,
 	Y < 8, Y2 is Y - 1, 
-	% writef('   a- Determine backward diagonal (free) for player %w at location: %w/%w \n',[Turn,X2,Y2]),
+	writef('   a- Determine backward diagonal (free) for player %w at location: %w/%w \n',[Turn,X2,Y2]),
 	free(X2,Y2),
-	% writef('      Location is empty\n'), !.
+	writef('      Location is empty\n'),
 	!.
+	
 a_d_b(Turn,X,Y,Score,Score):-
 	X < 8, X2 is X - 1,
 	Y < 8, Y2 is Y - 1, 
-	% writef('   b- Determine backward diagonal moves(same tkn) for player %w at location: %w/%w \n',[Turn,X2,Y2]),
+	writef('   b- Determine backward diagonal moves(same tkn) for player %w at location: %w/%w \n',[Turn,X2,Y2]),
 	call(Turn,X2,Y2),
-	% writef('      Same token in this loc \n'),
+	writef('      Same token in this loc \n'),
 	!.	
  
 a_d_b(Turn,X,Y,Score,OutScore):-
 	X < 8, X2 is X - 1,
 	Y < 8, Y2 is Y - 1, 
-	% writef('   c- Determine backward diagonal moves(opp token) for player %w at location: %w/%wScore is: %w\n',[Turn,X2,Y2,Score]),
+	writef('   c- Determine backward diagonal moves(opp token) for player %w at location: %w/%wScore is: %w\n',[Turn,X2,Y2,Score]),
  	opp_player(Turn,Opp_Player),
 	Score2 is Score + 1, 
 	call(Opp_Player,X2,Y2),
-	a_d_b(Turn,X2,Y2,Score2,OutScore).
-	% writef('     return from a_d_b with x2/y2: %w,%w and Score: %w \n',[X2,Y2,Score2]).
-		
+	a_d_b(Turn,X2,Y2,Score2,OutScore),
+	writef('     return from a_d_b with x2/y2: %w,%w and Score: %w \n',[X2,Y2,Score2]),
+	true.	
 
 
 /*--------------------------------------------------------------------------
  	Some extra functions
   	   display some information when required
  --------------------------------------------------------------------------*/	
+putnewtoken(Turn,[]):-writeln('Base case').
+putnewtoken(Turn,[X,Y]):-
+	NewFact=..[Turn,X,Y],
+	assertz(NewFact).
+	
 
 free(X,Y):-
 	\+ x(X,Y) , \+ o(X,Y).
@@ -395,6 +436,7 @@ showtable(Dim,Row):-
 showrow(Dim,_,Dim):-	nl.
 showrow(Dim,Row,Col):-
  	% writef("showrow, Dim/Row/Col is: %w/%w/%w \n",[Dim,Row,Col]),
+	% check2(6,3),
 	Col < Dim,
 	Col2 is Col + 1,
 	getdisptoken(Row,Col2,Res),
@@ -403,9 +445,11 @@ showrow(Dim,Row,Col):-
 	showrow(Dim, Row, Col2).
 
  getdisptoken(Row,Col,'OO'):-
- 	% writef("getdisptoken(red), Row/Col is: %w/%w \n",[Row,Col]),
+ 	% writef("getdisptoken(O), Row/Col is: %w/%w  ",[Row,Col]),
+	% (o(Row,Col)->writeln('Yes');writeln('No')),!.
 	o(Row,Col),!.
  getdisptoken(Row,Col,'XX'):-
- 	% writef("getdisptoken(blue), Row/Col is: %w/%w \n",[Row,Col]),
+ 	% writef("getdisptoken(X), Row/Col is: %w/%w \n",[Row,Col]),
+	% (x(Row,Col)->writeln('Yes');writeln('No')),!.
 	x(Row,Col),!.
  getdisptoken(_,_,'  ').
